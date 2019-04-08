@@ -186,7 +186,7 @@ public class DbAdapter {
     }
 
     /**
-     * Removes events with an _id &lt;= last_id from table
+     * Removes events with an _id <= last_id from table
      *
      * @param last_id the last id to delete
      * @return the number of rows in the table
@@ -425,12 +425,14 @@ public class DbAdapter {
     public String[] generateDataString(String tableName, int limit) {
         Cursor c = null;
         String data = null;
+        String ids = null; //郑卓源
         String last_id = null;
         try {
             c = contentResolver.query(mDbParams.gemUri(), null, null, null, DbParams.KEY_CREATED_AT + " ASC LIMIT " + String.valueOf(limit));
 
             if (c != null) {
                 StringBuilder dataBuilder = new StringBuilder();
+                StringBuilder idBuilder = new StringBuilder(); //郑卓源
                 final String flush_time = ",\"_flush_time\":";
                 String suffix = ",";
                 dataBuilder.append("[");
@@ -441,6 +443,7 @@ public class DbAdapter {
                         last_id = c.getString(c.getColumnIndex("_id"));
                     }
                     try {
+                        idBuilder.append(c.getString(c.getColumnIndex("_id"))); //郑卓源
                         keyData = c.getString(c.getColumnIndex(DbParams.KEY_DATA));
                         if (!TextUtils.isEmpty(keyData)) {
                             int index = keyData.lastIndexOf("\t");
@@ -457,12 +460,14 @@ public class DbAdapter {
                                     .append(flush_time)
                                     .append(System.currentTimeMillis())
                                     .append("}").append(suffix);
+                            idBuilder.append(suffix); //郑卓源
                         }
                     } catch (Exception e) {
                         SALog.printStackTrace(e);
                     }
                 }
                 data = dataBuilder.toString();
+                ids= idBuilder.toString();
             }
         } catch (final SQLiteException e) {
             SALog.i(TAG, "Could not pull records for SensorsData out of database " + tableName
@@ -476,7 +481,7 @@ public class DbAdapter {
         }
 
         if (last_id != null) {
-            return new String[]{last_id, data};
+            return new String[]{last_id, data, ids}; //郑卓源
         }
         return null;
     }

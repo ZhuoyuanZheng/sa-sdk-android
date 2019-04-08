@@ -11,6 +11,7 @@ import org.json.JSONObject;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.net.URLEncoder;
 
 public class SensorsDataExceptionHandler implements Thread.UncaughtExceptionHandler {
     private static final int SLEEP_TIMEOUT_MS = 3000;
@@ -49,12 +50,15 @@ public class SensorsDataExceptionHandler implements Thread.UncaughtExceptionHand
                             }
                             printWriter.close();
                             String result = writer.toString();
+                            result= URLEncoder.encode(result,"utf-8"); //郑卓源增加代码
 
                             messageProp.put("app_crashed_reason", result);
                         } catch (Exception ex) {
                             SALog.printStackTrace(ex);
                         }
+                        SensorsDataAPI.sharedInstance().setDebugMode(SensorsDataAPI.DebugMode.DEBUG_AND_TRACK); //郑卓源增加代码
                         sensorsData.track("AppCrashed", messageProp);
+                        SensorsDataAPI.sharedInstance().flushSync(); //郑卓源增加代码
                     } catch (Exception e) {
                         com.sensorsdata.analytics.android.sdk.SALog.printStackTrace(e);
                     }

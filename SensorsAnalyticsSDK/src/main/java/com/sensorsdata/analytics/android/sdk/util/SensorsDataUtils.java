@@ -23,7 +23,6 @@ import android.os.Build;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
-import android.view.Surface;
 import android.webkit.WebSettings;
 
 import com.sensorsdata.analytics.android.sdk.SALog;
@@ -34,6 +33,7 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.NetworkInterface;
 import java.text.SimpleDateFormat;
@@ -74,6 +74,11 @@ public final class SensorsDataUtils {
                     sdkRemoteConfig.setAutoTrackMode(-1);
                 }
                 return sdkRemoteConfig;
+            } else {
+                //默认配置
+                sdkRemoteConfig.setDisableDebugMode(false);
+                sdkRemoteConfig.setDisableSDK(false);
+                sdkRemoteConfig.setAutoTrackMode(-1);
             }
         } catch (Exception e) {
             com.sensorsdata.analytics.android.sdk.SALog.printStackTrace(e);
@@ -925,32 +930,6 @@ public final class SensorsDataUtils {
             add("0123456789abcdef");
         }
     };
-
-    /**
-     * 根据设备 rotation，判断屏幕方向，获取自然方向宽
-     *
-     * @param rotation 设备方向
-     * @param width    逻辑宽
-     * @param height   逻辑高
-     * @return 自然尺寸
-     */
-    public static int getNaturalWidth(int rotation, int width, int height) {
-        return rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180 ?
-                width : height;
-    }
-
-    /**
-     * 根据设备 rotation，判断屏幕方向，获取自然方向高
-     *
-     * @param rotation 设备方向
-     * @param width    逻辑宽
-     * @param height   逻辑高
-     * @return 自然尺寸
-     */
-    public static int getNaturalHeight(int rotation, int width, int height) {
-        return rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180 ?
-                height : width;
-    }
 
     private static final String TAG = "SA.SensorsDataUtils";
 }

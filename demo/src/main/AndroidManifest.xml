@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.BATTERY_STATS" />
 
     <application
         android:name=".MyApplication"
@@ -34,7 +35,9 @@
         <meta-data
             android:name="com.sensorsdata.analytics.android.EnableLogging"
             android:value="true" />
-
+        <meta-data
+            android:name="YOUR_DOWNLOAD_CHANNEL"
+            android:value="官网" />
     </application>
 
 </manifest>

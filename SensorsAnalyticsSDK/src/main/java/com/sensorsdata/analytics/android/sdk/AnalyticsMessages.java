@@ -1,6 +1,8 @@
-/**Created by wangzhuozhou on 2015/08/01.
- * Copyright © 2015－2018 Sensors Data Inc. All rights reserved. */
- 
+/**
+ * Created by wangzhuozhou on 2015/08/01.
+ * Copyright © 2015－2018 Sensors Data Inc. All rights reserved.
+ */
+
 package com.sensorsdata.analytics.android.sdk;
 
 import android.content.Context;
@@ -13,6 +15,9 @@ import android.os.Message;
 import android.text.TextUtils;
 import android.widget.Toast;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.sensorsdata.analytics.android.sdk.data.DbAdapter;
 import com.sensorsdata.analytics.android.sdk.data.DbParams;
 import com.sensorsdata.analytics.android.sdk.exceptions.ConnectErrorException;
@@ -26,17 +31,23 @@ import com.sensorsdata.analytics.android.sdk.util.SensorsDataUtils;
 import org.json.JSONObject;
 
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPOutputStream;
 
@@ -91,7 +102,7 @@ class AnalyticsMessages {
                             ret = mDbAdapter.addJSON(eventJson);
                         } else {
                             mEventsList.add(eventJson);
-                            if (mEventsList.size() < mFlushSize && mDbAdapter.getAppStart())return;
+                            if (mEventsList.size() < mFlushSize && mDbAdapter.getAppStart()) return;
                             ret = mDbAdapter.addJSON(mEventsList);
                             if (ret >= 0) {
                                 mEventsList.clear();
@@ -214,20 +225,86 @@ class AnalyticsMessages {
             String[] eventsData;
             synchronized (mDbAdapter) {
                 if (SensorsDataAPI.sharedInstance(mContext).isDebugMode()) {
-                    eventsData = mDbAdapter.generateDataString(DbParams.TABLE_EVENTS, 1);
-                } else {
                     eventsData = mDbAdapter.generateDataString(DbParams.TABLE_EVENTS, 50);
+                } else {
+                    eventsData = mDbAdapter.generateDataString(DbParams.TABLE_EVENTS, 5);
                 }
             }
+
             if (eventsData == null) {
                 return;
             }
 
             final String lastId = eventsData[0];
             final String rawMessage = eventsData[1];
+            final String[] ids = eventsData[2].substring(0, eventsData[2].length() - 1).split(",");
             String errorMessage = null;
+            Map<String, Map<String, String>> maps = new HashMap<String, Map<String, String>>();
 
             try {
+                /**
+                 * 郑卓源添加代码, 多行数据版本
+                 */
+                /**/
+                JsonElement jsonElement = new JsonParser().parse(rawMessage);
+                JsonArray jsonArray = jsonElement.getAsJsonArray();
+                for (int i = 0; i < jsonArray.size(); i++) {
+                    Map<String, String> map = new HashMap<>();
+                    JSONUtils.parseJson2Map(map, jsonArray.get(i).getAsJsonObject(), null);
+                    if (!map.containsKey("dcsuri")) {
+                        String ev = map.get("event");
+                        if (ev == null)
+                            map.put("dcsuri", "/");
+                        else if (ev.equals("$AppViewScreen") || ev.equals("$AppClick")) {
+                            StringBuilder builder = new StringBuilder();
+                            if (map.containsKey("properties.$screen_name"))
+                                builder.append(map.get("properties.$screen_name"));
+                            if (map.containsKey("event")) {
+                                builder.append(map.get("event"));
+                                builder.append('/');
+                            }
+                            if (map.containsKey("properties.$element_content")) {
+                                builder.append(map.get("properties.$element_content"));
+                            } else if (map.containsKey("properties.$element_id")) {
+                                builder.append(map.get("properties.$element_id"));
+                            }
+                            map.put("dcsuri", builder.toString());
+                        } else
+                            map.put("dcsuri", ev);
+                    }
+                    maps.put(ids[i], map);
+                    //  添加完毕
+                }
+
+                /**
+                 * 郑卓源添加代码, 一行数据版本
+                 */
+                /*
+                Map<String, String> map = new HashMap<>();
+                JSONUtils.parseJson2Map(map, rawMessage, null);
+                if (!map.containsKey("dcsuri")) {
+                    String ev = map.get("event");
+                    if (ev == null)
+                        map.put("dcsuri", "/");
+                    else if (ev.equals("$AppViewScreen") || ev.equals("$AppClick")) {
+                        StringBuilder builder = new StringBuilder();
+                        if (map.containsKey("properties.$screen_name"))
+                            builder.append(map.get("properties.$screen_name"));
+                        if (map.containsKey("event")) {
+                            builder.append(map.get("event"));
+                            builder.append('/');
+                        }
+                        if (map.containsKey("properties.$element_content")) {
+                            builder.append(map.get("properties.$element_content"));
+                        } else if (map.containsKey("properties.$element_id")) {
+                            builder.append(map.get("properties.$element_id"));
+                        }
+                        map.put("dcsuri", builder.toString());
+                    } else
+                        map.put("dcsuri", ev);
+                }
+                */
+
                 String data;
                 try {
                     data = encodeData(rawMessage);
@@ -235,7 +312,14 @@ class AnalyticsMessages {
                     // 格式错误，直接将数据删除
                     throw new InvalidDataException(e);
                 }
-                sendHttpRequest(SensorsDataAPI.sharedInstance(mContext).getServerUrl(), data, rawMessage, false);
+                /**
+                 * 郑卓源修改代码2行
+                 */
+                if (SensorsDataAPI.ServerMode.SENSORS_SERVER.equals(SensorsDataAPI.sharedInstance().getServerMode()))
+                    sendHttpRequest(SensorsDataAPI.sharedInstance(mContext).getServerUrl(), data, rawMessage, false);
+                else if (SensorsDataAPI.ServerMode.SDC_SERVER.equals(SensorsDataAPI.sharedInstance().getServerMode()))
+//                    sendOneHttpRequest2Sdc(SensorsDataAPI.sharedInstance(mContext).getServerUrl(), map);
+                    sendHttpRequest2Sdc(SensorsDataAPI.sharedInstance(mContext).getServerUrl(), maps);
             } catch (ConnectErrorException e) {
                 deleteEvents = false;
                 errorMessage = "Connection error: " + e.getMessage();
@@ -284,7 +368,7 @@ class AnalyticsMessages {
         }
     }
 
-    private void sendHttpRequest(String path, String data, String rawMessage, boolean isRedirects) throws ConnectErrorException,ResponseErrorException {
+    private void sendHttpRequest(String path, String data, String rawMessage, boolean isRedirects) throws ConnectErrorException, ResponseErrorException {
         HttpURLConnection connection = null;
         InputStream in = null;
         OutputStream out = null;
@@ -329,7 +413,7 @@ class AnalyticsMessages {
             bout.flush();
 
             int responseCode = connection.getResponseCode();
-            SALog.i(TAG, "responseCode: "+responseCode);
+            SALog.i(TAG, "responseCode: " + responseCode);
             if (!isRedirects && SensorsDataHttpURLConnectionHelper.needRedirects(responseCode)) {
                 String location = SensorsDataHttpURLConnectionHelper.getLocation(connection, path);
                 if (!TextUtils.isEmpty(location)) {
@@ -366,6 +450,241 @@ class AnalyticsMessages {
             closeStream(bout, out, in, connection);
         }
     }
+
+    /**
+     * 郑卓源添加的函数，把数据上报的sdc服务器的接口函数
+     *
+     * @param path        SDC服务器地址
+     * @param bodyref     map格式的数据格式
+     * @throws ConnectErrorException
+     * @throws ResponseErrorException
+     * @throws InvalidDataException
+     */
+    private void sendOneHttpRequest2Sdc(String path, Map<String, String> bodyref) throws ConnectErrorException, ResponseErrorException, InvalidDataException {
+        boolean isDebugMode = SensorsDataAPI.sharedInstance(mContext).isDebugMode();
+        if (isDebugMode && !SensorsDataAPI.sharedInstance
+                (mContext).isDebugWriteData()) {
+            //SALog.i(TAG, String.format("debug_only_model"));
+            return;
+        }
+
+        String serverUrl = path + "?dcsverbose=" + (isDebugMode ? "true" : "false");
+
+        HttpURLConnection conn = null;
+        // construct data
+        String data = "";
+        String response = "";
+        int responseCode;
+
+        try {
+            final URL url = new URL(serverUrl);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setInstanceFollowRedirects(false);
+            try {
+                String ua = SensorsDataUtils.getUserAgent(mContext);
+                if (TextUtils.isEmpty(ua)) {
+                    ua = "Websights Android SDK";
+                }
+                if ("$AppStart".equals(bodyref.get("event"))) {
+                    conn.addRequestProperty("User-Agent", ua);
+                } else conn.addRequestProperty("User-Agent", "-");
+            } catch (Exception e) {
+                throw new ConnectErrorException(e);
+            }
+
+            conn.setRequestProperty("Cookie", SensorsDataAPI.sharedInstance(mContext).getCookie(false));
+            conn.setUseCaches(false);
+            conn.setDoOutput(true);
+
+            try {
+                Iterator<String> i = bodyref.keySet().iterator();
+                boolean ampersand = false;
+                while (i.hasNext()) {
+                    if (ampersand) {
+                        data += "&";
+                    } else {
+                        ampersand = true;
+                    }
+                    String b = i.next();
+                    data += b + "=" + bodyref.get(b).toString();
+                }
+            } catch (Exception e) {
+                throw new InvalidDataException(e);
+            }
+
+            OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
+            wr.write(data);
+            wr.flush();
+
+            try {
+                // get the response
+                BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                String line;
+                while ((line = rd.readLine()) != null) {
+                    response += line;
+                    response += "\n";
+                }
+                rd.close();
+            } catch (IOException e1) {
+                if (conn != null && conn.getErrorStream() != null) {
+                    // get the response
+                    BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+                    String line;
+                    while ((line = rd.readLine()) != null) {
+                        response += line;
+                        response += "\n";
+                    }
+                }
+            }
+
+            responseCode = conn.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                SALog.i(TAG, String.format("valid Status: %s %s, response: %s", conn.getResponseCode(), conn.getResponseMessage(), response));
+                SALog.i(TAG, String.format("valid message: %s, %S", bodyref.get("event"), bodyref.get("time")));
+
+            } else {
+                SALog.i(TAG, String.format("invalid message: %s", bodyref.toString()));
+                SALog.i(TAG, String.format(Locale.CHINA, "ret_code: %d, ret_content: %s", responseCode, response));
+            }
+            if (responseCode < HttpURLConnection.HTTP_OK || responseCode >= HttpURLConnection.HTTP_MULT_CHOICE) {
+                // 校验错误，直接将数据删除
+                throw new ResponseErrorException(String.format("flush failure with response '%s'",
+                        response));
+            }
+
+            wr.close();
+        } catch (IOException e) {
+            throw new ConnectErrorException(e);
+//        } catch (Exception e) {
+//            SALog.i(TAG, String.format("invalid message: %s, %S", bodyref.get("event"), bodyref.get("time")));
+//            throw e;
+        } finally {
+            conn.disconnect();
+        }
+    }
+
+
+    /**
+     * 郑卓源添加的函数，把多条数据逐一上报的sdc服务器的接口函数
+     *
+     * @param path        SDC服务器地址
+     * @param maps        map格式的数据格式
+     * @throws ConnectErrorException
+     * @throws ResponseErrorException
+     * @throws InvalidDataException
+     */
+    private void sendHttpRequest2Sdc(String path, Map<String, Map<String, String>> maps) throws ConnectErrorException, ResponseErrorException, InvalidDataException {
+        boolean isDebugMode = SensorsDataAPI.sharedInstance(mContext).isDebugMode();
+        if (isDebugMode && !SensorsDataAPI.sharedInstance
+                (mContext).isDebugWriteData()) {
+            //SALog.i(TAG, String.format("debug_only_model"));
+            return;
+        }
+
+        String serverUrl = path + "?dcsverbose=" + (isDebugMode ? "true" : "false");
+
+        for (Map.Entry<String, Map<String, String>> entry : maps.entrySet()) {
+            HttpURLConnection conn = null;
+            // construct data
+            String data = "";
+            String response = "";
+            int responseCode;
+
+            try {
+                final URL url = new URL(serverUrl);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setInstanceFollowRedirects(false);
+                String ua = SensorsDataUtils.getUserAgent(mContext);
+                if (TextUtils.isEmpty(ua)) {
+                    ua = "Websights Android SDK";
+                }
+                if ("$AppStart".equals(entry.getValue().get("event"))) {
+                    conn.addRequestProperty("User-Agent", ua);
+                } else conn.addRequestProperty("User-Agent", "-");
+
+
+                conn.setRequestProperty("Cookie", SensorsDataAPI.sharedInstance(mContext).getCookie(false));
+                conn.setUseCaches(false);
+                conn.setDoOutput(true);
+
+                try {
+                    Map<String, String> m = entry.getValue();
+                    Iterator<String> i = m.keySet().iterator();
+                    boolean ampersand = false;
+                    while (i.hasNext()) {
+                        if (ampersand) {
+                            data += "&";
+                        } else {
+                            ampersand = true;
+                        }
+                        String b = i.next();
+                        data += b + "=" + m.get(b).toString();
+                    }
+                } catch (Exception e) {
+                    throw new InvalidDataException(e);
+                }
+
+                OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
+                wr.write(data);
+                wr.flush();
+
+                try {
+                    // get the response
+                    BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    String line;
+                    while ((line = rd.readLine()) != null) {
+                        response += line;
+                        response += "\n";
+                    }
+                    rd.close();
+                } catch (IOException e1) {
+                    if (conn != null && conn.getErrorStream() != null) {
+                        // get the response
+                        BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+                        String line;
+                        while ((line = rd.readLine()) != null) {
+                            response += line;
+                            response += "\n";
+                        }
+                    }
+                }
+
+                responseCode = conn.getResponseCode();
+
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    SALog.i(TAG, String.format("valid Status: %s %s, response: %s", conn.getResponseCode(), conn.getResponseMessage(), response));
+                    int count = mDbAdapter.cleanupEvents(entry.getKey());
+                    SALog.i(TAG, String.format(Locale.CHINA, "Events flushed. [cleanid = %s]，[left = %d], [valid message: %s, %s]", entry.getKey(), count, entry.getValue().get("event"), entry.getValue().get("time")));
+
+
+                } else {
+                    SALog.i(TAG, String.format("invalid message: %s", entry.getValue().toString()));
+                    SALog.i(TAG, String.format(Locale.CHINA, "ret_code: %d, ret_content: %s", responseCode, response));
+                }
+                if (responseCode < HttpURLConnection.HTTP_OK || responseCode >= HttpURLConnection.HTTP_MULT_CHOICE) {
+                    // 校验错误，直接将数据删除
+                    throw new ResponseErrorException(String.format("flush failure with response '%s'",
+                            response));
+                }
+//                try {}
+//                catch(Exception e){
+//                    SALog.i(TAG, String.format("request is sent but no response(invalid message): %s, %s", entry.getValue().get("event"), entry.getValue().get("time")));
+//                    if(!SensorsDataAPI.sharedInstance().getIsResendWhenNoResponse()){
+//                        int count = mDbAdapter.cleanupEvents(entry.getKey());
+//                        SALog.i(TAG, String.format(Locale.CHINA, "Events flushed. [cleanid = %s]，[left = %d]", entry.getKey(), count));
+//                    }
+//                }
+
+                wr.close();
+
+            } catch (IOException e) {
+                throw new ConnectErrorException(e);
+            } finally {
+                conn.disconnect();
+            }
+        }
+    }
+
 
     private void closeStream(BufferedOutputStream bout, OutputStream out, InputStream in, HttpURLConnection connection) {
         if (null != bout) {

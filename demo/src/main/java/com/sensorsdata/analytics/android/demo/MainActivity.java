@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import com.sensorsdata.analytics.android.demo.databinding.ActivityMainBinding;
+import com.sensorsdata.analytics.android.sdk.SensorsDataAPI;
 
 import androidx.databinding.DataBindingUtil;
 
@@ -32,7 +33,13 @@ public class MainActivity extends Activity {
     private void initLambdaButton() {
         Button button = (Button) findViewById(R.id.lambdaButton);
         button.setOnClickListener(v -> {
-
+            System.out.println("crash in 1 second");
+            int[] a=new int[5];
+            for(int i=0;i<6;i++)
+            {
+                a[i]=i;
+                System.out.println(a[i]);
+            }
         });
     }
 
@@ -40,7 +47,15 @@ public class MainActivity extends Activity {
         findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                //for(int i=0;i<6;i++)
+                //{
+                    SensorsDataAPI.sharedInstance().track("event1");
+//                    SensorsDataAPI.sharedInstance().track("event2");
+//                    SensorsDataAPI.sharedInstance().track("event3");
+//                    SensorsDataAPI.sharedInstance().track("event4");
+//                    SensorsDataAPI.sharedInstance().track("event5");
+//                    SensorsDataAPI.sharedInstance().track("event6");
+                //}
             }
         });
     }

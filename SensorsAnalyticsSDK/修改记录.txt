@@ -1,0 +1,65 @@
+==============2019-03-12=======================
+1.改了sdk下的bulid.gradle,31行添加
+    compile 'com.google.code.gson:gson:2.7'
+
+2.改了util/JSONUtil.java文件，添加函数parseJson2Map和parseJson2Map
+
+3.改了AnalyticsMessages.java文件，
+加了函数sendHttpRequest2Sdc，改了函数sendData
+加了两行
+                if(SensorsDataAPI.ServerMode.SENSORS_SERVER.equals(SensorsDataAPI.sharedInstance().getServerMode())) sendHttpRequest(SensorsDataAPI.sharedInstance(mContext).getServerUrl(), data, rawMessage, false);
+                else if(SensorsDataAPI.ServerMode.SDC_SERVER.equals(SensorsDataAPI.sharedInstance().getServerMode())) sendHttpRequest2Sdc(SensorsDataAPI.sharedInstance(mContext).getServerUrl(),map,false);
+
+4.SensorsDataAPI.java文件setServerUrl函数，添加判断增加sdc地址
+增加枚举类ServerMode,
+
+增加属性
+    private ServerMode serverMode;
+    public ServerMode getServerMode(){return serverMode;}//
+
+
+5.SensorsDataExceptionHandler.java文件，改了
+
+     result= URLEncoder.encode(result,"utf-8");
+     SensorsDataAPI.sharedInstance().setDebugMode(SensorsDataAPI.DebugMode.DEBUG_AND_TRACK);
+     SensorsDataAPI.sharedInstance().flushSync();
+
+
+    SensorsDataAPI.sharedInstance().setDebugMode(SensorsDataAPI.DebugMode.DEBUG_AND_TRACK); //郑卓源增加代码
+    sensorsData.track("AppCrashed", messageProp);
+    SensorsDataAPI.sharedInstance().flushSync(); //郑卓源增加代码
+
+6.新增类WSUtils.java，增加自定义处理函数
+
+
+==============2019-03-13=======================
+1.SensorsDataActivityLifecycleCallbacks.java文件增加两行
+                        WSUtils.collectDeviceId(activity,properties);//启动时获取设备id
+                        if(firstStart) WSUtils.collectAppList(activity,properties);//首次启动时采集应用列表
+
+2.SensorsDataAPI.java文件，增加调试代码
+
+            /**
+             * 郑卓源增加代码
+             */
+            if(mAndroidId.equals("100fff560f6bc227")){
+                mDebugMode = DebugMode.DEBUG_AND_TRACK;
+                enableLog(true);
+            }//郑卓源增加代码
+
+3.AnalyticsMessages.java文件，sendData函数，修改对dcsuri字段的取值处理
+
+4.AndroidManifest.xml文件增加
+        <meta-data
+            android:name="YOUR_DOWNLOAD_CHANNEL"
+            android:value="官网" />
+
+==============2019-04-04=======================
+目标：批量读取数据库，逐一发送
+1.加了函数sendOneHttpRequest2Sdc，改了函数sendData和sendHttpRequest2Sdc
+
+2.SensorsDataAPI加了
+    private boolean mIsResendWhenNoResponse = false;
+    public boolean getIsResendWhenNoResponse() {return this.mIsResendWhenNoResponse;}
+
+3.DbAdapter.java加了ids
