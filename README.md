@@ -15,14 +15,14 @@ This is the official Android SDK for Sensors Analytics.
 buildscript {
     repositories {
         jcenter()
-	//添加 Sensors Analytics maven 库地址
+	//添加 maven 库地址
         maven {
-            url 'https://dl.bintray.com/zouyuhan/maven'
+            url 'https://jitpack.io'
         }
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:2.2.3'
-        //添加 Sensors Analytics android-gradle-plugin 依赖
+        //添加 SASDK android-gradle-plugin 依赖
         classpath 'com.sensorsdata.analytics.android:android-gradle-plugin2:2.0.6'
     }
 }
@@ -30,16 +30,13 @@ buildscript {
 allprojects {
     repositories {
         jcenter()
-	//添加 Sensors Analytics maven 库地址
+	//添加 maven 库地址
         maven {
-            url 'https://dl.bintray.com/zouyuhan/maven'
+            url 'https://jitpack.io'
         }
     }
 }
 ```
-
-如下示例图：
-![](https://github.com/sensorsdata/sa-sdk-android/blob/master/screenshots/android_sdk_autotrack_1.png)
 
 第二步：在 **主 module** 的 build.gradle 文件中添加 com.sensorsdata.analytics.android 插件、Sensors Analytics SDK 依赖：
 
@@ -50,14 +47,12 @@ apply plugin: 'com.sensorsdata.analytics.android'
 
 dependencies {
    compile 'com.android.support:appcompat-v7:25.1.1'
-   //添加 Sensors Analytics SDK 依赖
-   compile 'com.sensorsdata.analytics.android:SensorsAnalyticsSDK:2.0.2'
+   //添加 SASDK 依赖
+   compile 'com.github.ZhuoyuanZheng:sa-sdk-android:v3.0.3a'
 }
 ```
-SensorsAnalyticsSDK 的最新版本号请参考 [github 更新日志](https://github.com/sensorsdata/sa-sdk-android/releases)。
+SensorsAnalyticsSDK 的最新版本号请参考 [github 更新日志](https://github.com/ZhuoyuanZheng/sa-sdk-android/releases)。
 
-如下示例图：
-![](https://github.com/sensorsdata/sa-sdk-android/blob/master/screenshots/android_sdk_autotrack_2.png)
 
 第三步：由于 SDK 会依赖 appcompat-v7 处理下面几个控件：
 
@@ -120,8 +115,6 @@ Android SDK 要求最低系统版本为 API 11（Android 3.0），特别地，Au
 
 See our [full manual](http://www.sensorsdata.cn/manual/android_sdk.html)
 
-或者加入 QQ 讨论群：<br>
-![ QQ 讨论群](screenshots/qrCode.jpeg)
 
 ## For Java Developers
 
