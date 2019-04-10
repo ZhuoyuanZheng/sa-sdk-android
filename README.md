@@ -3,7 +3,7 @@
 
 # Sensors Analytics
 
-This is the official Android SDK for Sensors Analytics.
+This is a 3th party Android SDK for Sensors Analytics.
 
 ## Easy Installation
 
@@ -48,7 +48,7 @@ apply plugin: 'com.sensorsdata.analytics.android'
 dependencies {
    compile 'com.android.support:appcompat-v7:25.1.1'
    //添加 SASDK 依赖
-   compile 'com.github.ZhuoyuanZheng:sa-sdk-android:v3.0.3a'
+   compile 'com.github.ZhuoyuanZheng:sa-sdk-android:v3.0.3b'
 }
 ```
 SensorsAnalyticsSDK 的最新版本号请参考 [github 更新日志](https://github.com/ZhuoyuanZheng/sa-sdk-android/releases)。
@@ -110,10 +110,6 @@ Android SDK 要求最低系统版本为 API 11（Android 3.0），特别地，Au
 }
 
 ```
-
-## To Learn More
-
-See our [full manual](http://www.sensorsdata.cn/manual/android_sdk.html)
 
 
 ## For Java Developers
